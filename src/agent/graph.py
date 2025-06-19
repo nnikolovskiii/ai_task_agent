@@ -1,220 +1,163 @@
-from operator import add
-from typing import List, Annotated, TypedDict
-import atexit
+from __future__ import annotations
+
+import operator
+from typing import TypedDict, Literal, Annotated, Optional
+
+from dotenv import load_dotenv
+from langchain_core.messages import AIMessage, HumanMessage
+from langchain_google_genai import ChatGoogleGenerativeAI
+from langgraph.constants import START, END
+from langgraph.graph import StateGraph, add_messages
+from pydantic import BaseModel, Field
+
+from agent.gemini_transcript import transcribe_audio_file
+from agent.audio_generation import generate_audio_output
+from agent.utils import bytes_to_wav
+from src.agent.file_utils import get_project_structure_as_string, concat_files_in_str
+from src.agent.models import FileReflectionList, SearchFilePathsList, EnhanceTextInstruction
+from src.agent.prompts import file_planner_instructions, answer_instructions, \
+    get_current_date, enhance_text_instruction
+
+load_dotenv()
 
 
-from langchain.schema.runnable.config import RunnableConfig
-from langchain_cohere import CohereRerank
-from langchain_core.documents import Document
-from langchain_core.messages import AnyMessage, HumanMessage, AIMessage
-# Changed import from Google to OpenAI
-from langchain_openai import ChatOpenAI
-from langgraph.graph import END, StateGraph, START
-from langgraph.graph.message import add_messages
-from langgraph.types import Send
-
-from src.agent.prompts import query_writer_instructions, get_current_date, reflection_instructions, \
-    answer_instructions
-from src.agent.init_weaviate import initialize_rag_components
-
-
-class SearchQueryList(TypedDict):
-    query: List[str]
-
-
-class Reflection(TypedDict):
-    is_sufficient: bool
-    knowledge_gap: str
-    follow_up_queries: List[str]
-
-
-DEFAULT_WEAVIATE_COLLECTION_NAME = "SavaCollection"
-DEFAULT_WEAVIATE_TEXT_KEY = "text"
-SEMANTIC_RESULTS_K = 50
-BM25_RESULTS_LIMIT = 50
-RERANK_TOP_N = 5
-
-
-class OverallState(TypedDict):
+# Graph state
+class State(TypedDict):
     messages: Annotated[list, add_messages]
-    query_list: List[str]
-    search_query: Annotated[List[str], add]
-    web_research_result: Annotated[List[str], add]
-    sources_gathered: Annotated[List[dict], add]
-    is_sufficient: bool
-    knowledge_gap: str
-    follow_up_queries: List[str]
-    research_loop_count: int
-    number_of_ran_queries: int
-    initial_search_query_count: int
-    max_research_loops: int
+    project_path: str
+    contexts: Annotated[list, operator.add]
+    file_reflection: FileReflectionList
+    all_file_paths: Annotated[set, lambda x, y: x.union(y)]
+    audio_file: str
+    enhanced_message: str
+    voice_output: Optional[bool]
+    language: str
+    audio: str
 
 
-vector_store, weaviate_client, embedding_model = initialize_rag_components()
+model_name = "gemini-2.5-flash-lite-preview-06-17"
+
+llm = ChatGoogleGenerativeAI(model=model_name)
 
 
-def _close_weaviate_connection():
-    if weaviate_client:
-        print("--- Closing Weaviate client connection on exit. ---")
-        weaviate_client.close()
-
-
-if weaviate_client:
-    atexit.register(_close_weaviate_connection)
-
-if vector_store and weaviate_client:
-    retriever = vector_store.as_retriever(search_kwargs={'k': SEMANTIC_RESULTS_K})
-    cohere_reranker = CohereRerank(model="rerank-english-v3.0", top_n=RERANK_TOP_N)
-else:
-    print("RAG components not fully initialized. The agent will not be able to retrieve documents.")
-    retriever = None
-    cohere_reranker = None
-
-
-def get_research_topic(messages: list[AnyMessage]) -> str:
-    """Extracts the research topic from the user's message."""
-    if messages and isinstance(messages[-1], HumanMessage):
-        return messages[-1].content
-    return "No research topic found."
-
-
-def generate_query(state: OverallState):
-    """Node that generates search queries based on the User's question."""
-    print("--- Calling Generate Query Node ---")
-    state["initial_search_query_count"] = state.get("initial_search_query_count", 3)
-    # Changed from ChatGoogleGenerativeAI to ChatOpenAI
-    llm = ChatOpenAI(model="gpt-4o", temperature=0.7)
-    structured_llm = llm.with_structured_output(SearchQueryList)
-    formatted_prompt = query_writer_instructions.format(
-        research_topic=get_research_topic(state["messages"]),
-        number_queries=state["initial_search_query_count"],
+# Schema for structured output to use in evaluation
+class Feedback(BaseModel):
+    grade: Literal["funny", "not funny"] = Field(
+        description="Decide if the joke is funny or not.",
     )
-    result = structured_llm.invoke(formatted_prompt)
-    return {"query_list": result.get('query', []), "initial_search_query_count": 3,}
-
-
-def continue_to_rag_research(state: OverallState):
-    """Routing function to start parallel RAG research for each query."""
-    print("--- Routing to RAG Research ---")
-    return [
-        Send("rag_research", {"search_query": search_query, "id": int(idx)})
-        for idx, search_query in enumerate(state["query_list"])
-    ]
-
-
-def rag_research(state: OverallState):
-    """Node that performs hybrid RAG search for a given query."""
-    user_query = state["search_query"][-1]
-    print(f"--- Calling RAG Research Node for query: '{user_query}' ---")
-
-    if not retriever or not weaviate_client or not cohere_reranker:
-        print("ERROR: RAG components are not available. Skipping research.")
-        return {
-            "web_research_result": ["Could not perform research due to missing components."],
-            "sources_gathered": [],
-            "search_query": [user_query]
-        }
-
-    collection = weaviate_client.collections.get(DEFAULT_WEAVIATE_COLLECTION_NAME)
-    bm25_response = collection.query.bm25(
-        query=user_query,
-        query_properties=[DEFAULT_WEAVIATE_TEXT_KEY],
-        limit=BM25_RESULTS_LIMIT
+    feedback: str = Field(
+        description="If the joke is not funny, provide feedback on how to improve it.",
     )
-    bm25_docs = [Document(page_content=obj.properties[DEFAULT_WEAVIATE_TEXT_KEY]) for obj in bm25_response.objects]
-    semantic_docs = retriever.invoke(user_query)
-    unranked_docs = list({doc.page_content: doc for doc in bm25_docs + semantic_docs}.values())
-    reranked_docs = cohere_reranker.compress_documents(documents=unranked_docs,
-                                                       query=user_query) if unranked_docs else []
-
-    if not reranked_docs:
-        research_summary = "No relevant documents found."
-        sources = []
-    else:
-        research_summary = "\n\n---\n\n".join([doc.page_content for doc in reranked_docs])
-        sources = [{"source": doc.metadata.get("source", f"Doc {i + 1}"), "content": doc.page_content} for i, doc in
-                   enumerate(reranked_docs)]
-
-    return {
-        "web_research_result": [research_summary],
-        "sources_gathered": sources,
-    }
 
 
-def reflection(state: OverallState) -> dict:
-    """Node that reflects on the gathered information and decides if more research is needed."""
-    print("--- Calling Reflection Node ---")
-    research_loop_count = state.get("research_loop_count", 0) + 1
-    # Changed from ChatGoogleGenerativeAI to ChatOpenAI
-    llm = ChatOpenAI(model="gpt-4o", temperature=0)
-    structured_llm = llm.with_structured_output(Reflection)
-    print("&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&")
-    print(len(state["web_research_result"]))
-    formatted_prompt = reflection_instructions.format(
-        research_topic=get_research_topic(state["messages"]),
-        summaries="\n\n---\n\n".join(state["web_research_result"]),
-        number_queries=state["initial_search_query_count"],
+# Augment the LLM with schema for structured output
+evaluator = llm.with_structured_output(Feedback)
+
+
+def enhance_node(state: State):
+    """
+    Enhances the user message to make it more understandable and clear.
+    """
+
+
+    audio_str = state.get("audio", None)
+    last_message = state["messages"][-1]
+
+    user_task = last_message.content
+    if audio_str is not None:
+        audio_file_path = bytes_to_wav(audio_str)
+
+        print(f"Audio file detected. Starting transcription for: {audio_file_path}")
+        user_task = transcribe_audio_file(audio_file_path)
+        print(f"Transcription result: {user_task}")
+
+    structured_llm = llm.with_structured_output(EnhanceTextInstruction)
+
+    formatted_prompt = enhance_text_instruction.format(
+        user_task=user_task
     )
-    result = structured_llm.invoke(formatted_prompt)
-    return {
-        "is_sufficient": result['is_sufficient'],
-        "knowledge_gap": result['knowledge_gap'],
-        "follow_up_queries": result['follow_up_queries'],
-        "research_loop_count": research_loop_count,
-        "number_of_ran_queries": len(state["search_query"]),
-    }
+
+    print("Enhancing user message...")
+    result: EnhanceTextInstruction = structured_llm.invoke(formatted_prompt)
+    enhanced_message = result.enhance_user_message
+    print(f"Enhanced message: {enhanced_message}")
+
+    return {"enhanced_message": enhanced_message, "language": result.language}
 
 
-def evaluate_research(state: OverallState) :
-    """Routing function that decides whether to continue research or finalize the answer."""
-    print("--- Evaluating Research ---")
-    max_research_loops = state.get("max_research_loops", 2)
-    if state["is_sufficient"] or state["research_loop_count"] >= max_research_loops:
-        print("--- Decision: Finalize Answer ---")
-        return "finalize_answer"
-    else:
-        print("--- Decision: Continue Research with Follow-up Queries ---")
-        return [
-            Send("rag_research", {"search_query": follow_up_query, "id": state["number_of_ran_queries"] + idx})
-            for idx, follow_up_query in enumerate(state["follow_up_queries"])
-        ]
+def llm_call_generator(state: State):
+    """
+    Transcribes audio, then uses the text to find relevant files.
+    """
+    enhanced_message = state["enhanced_message"]
+    project_path = "/home/nnikolovskii/data/nlb_data"
+
+    user_task = enhanced_message
+
+    project_structure = get_project_structure_as_string(project_path)
+    structured_llm = llm.with_structured_output(SearchFilePathsList)
+
+    formatted_prompt = file_planner_instructions.format(
+        user_task=user_task,
+        project_structure=project_structure,
+    )
+
+    print("Invoking LLM to find relevant file paths...")
+    result: SearchFilePathsList = structured_llm.invoke(formatted_prompt)
+    context = concat_files_in_str(result.file_paths)
+    return {"contexts": [context], "all_file_paths": set(result.file_paths)}
 
 
-def finalize_answer(state: OverallState):
+def finalize_answer(state: State):
     """
     This node is now a generator. It `yield`s each chunk of the response as an
     AIMessage, allowing `langgraph` to stream the output.
     """
+    context = state["contexts"][-1]
+    voice_output = state.get("voice_output", False) # Default to False if not present
+    language = state["language"]
+
+    if language == "mkd":
+        language = "Macedonian"
+    elif language == "alb":
+        language = "Albanian"
+    elif language == "eng":
+        language = "English"
+
     print("--- Calling Finalize Answer Node ---")
     messages = state["messages"]
     last_ai_message = messages[-1]
     # Changed from ChatGoogleGenerativeAI to ChatOpenAI
-    llm = ChatOpenAI(model="gpt-4o", temperature=0.5)
     formatted_prompt = answer_instructions.format(
         current_date=get_current_date(),
-        research_topic=get_research_topic(state["messages"]),
-        summaries="\n\n---\n\n".join(state["web_research_result"]),
-        sources=state["sources_gathered"]
+        research_topic=state["messages"][-1].content,
+        summaries=context,
+        language=language
     )
     response = llm.invoke(formatted_prompt)
+    print(response.text)
 
     return {"messages": [AIMessage(content=response.content)]}
 
 
-builder = StateGraph(OverallState)
+optimizer_builder = StateGraph(State)
 
-builder.add_node("generate_query", generate_query)
-builder.add_node("rag_research", rag_research)
-builder.add_node("reflection", reflection)
-builder.add_node("finalize_answer", finalize_answer)
+optimizer_builder.add_node("enhance_node", enhance_node)
+optimizer_builder.add_node("llm_call_generator", llm_call_generator)
+optimizer_builder.add_node("finalize_answer", finalize_answer)
 
-builder.add_edge(START, "generate_query")
-builder.add_conditional_edges("generate_query", continue_to_rag_research)
-builder.add_edge("rag_research", "reflection")
-builder.add_conditional_edges("reflection", evaluate_research, {
-    "finalize_answer": "finalize_answer",
-    "rag_research": "rag_research"
-})
-builder.add_edge("finalize_answer", END)
+optimizer_builder.add_edge(START, "enhance_node")
+optimizer_builder.add_edge("enhance_node", "llm_call_generator")
+optimizer_builder.add_edge("llm_call_generator", "finalize_answer")
+optimizer_builder.add_edge("finalize_answer", END)
 
-graph = builder.compile()
+
+# Compile the workflow
+graph = optimizer_builder.compile()  # Renamed from optimizer_workflow
+
+# # Invoke
+# state = graph.invoke(
+#     {"messages": [HumanMessage("Кои услови треба да ги исполнам за да извадам инвестициски кредит?")],
+#      "project_path": "/home/nnikolovskii/data/nlb_data",
+#      "audio_file": "/home/nnikolovskii/PycharmProjects/langgraph-demo/src/data/karticki.ogg",
+#      "voice_output": True})
