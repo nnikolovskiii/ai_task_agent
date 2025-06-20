@@ -31,11 +31,9 @@ class EnhanceTextInstruction(BaseModel):
 
 
 class Route(BaseModel):
-    step: Literal["about_me", "info", "not_capable"] = Field(
+    step: Literal["about_me", "info", "not_suitable"] = Field(
         None, description="The next step in the routing process"
     )
     rationale: str = Field(
         description="A brief explanation of why these file_paths could prove relevant to the user's task."
     )
-
-

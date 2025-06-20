@@ -1,7 +1,9 @@
 from PIL import Image
+from dotenv import load_dotenv
 from google import genai
 
-client = genai.Client(api_key="GEMINI_API_KEY")
+load_dotenv()
+client = genai.Client()
 
 
 def multimodal_generation(image_file: str, instruction: str):

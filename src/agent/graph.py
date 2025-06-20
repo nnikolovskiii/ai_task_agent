@@ -4,7 +4,7 @@ import operator
 from typing import TypedDict, Literal, Annotated, Optional
 
 from dotenv import load_dotenv
-from langchain_core.messages import AIMessage, HumanMessage
+from langchain_core.messages import AIMessage, HumanMessage, SystemMessage
 from langchain_google_genai import ChatGoogleGenerativeAI
 from langgraph.constants import START, END
 from langgraph.graph import StateGraph, add_messages
@@ -12,11 +12,13 @@ from pydantic import BaseModel, Field
 
 from agent.gemini_transcript import transcribe_audio_file
 from agent.audio_generation import generate_audio_output
-from agent.utils import bytes_to_wav
+from agent.img_input import multimodal_generation
+from agent.utils import bytes_to_wav, bytes_to_image
 from src.agent.file_utils import get_project_structure_as_string, concat_files_in_str
-from src.agent.models import FileReflectionList, SearchFilePathsList, EnhanceTextInstruction
+from src.agent.models import FileReflectionList, SearchFilePathsList, EnhanceTextInstruction, Route
 from src.agent.prompts import file_planner_instructions, answer_instructions, \
-    get_current_date, enhance_text_instruction
+    get_current_date, enhance_text_instruction, about_me_instructions, not_capable_instruction, routing_instruction, \
+    image_text_instruction
 
 load_dotenv()
 
@@ -33,6 +35,10 @@ class State(TypedDict):
     voice_output: Optional[bool]
     language: str
     audio: str
+    user_task:str
+    decision: str
+    image: str
+    image_file_path: str
 
 
 model_name = "gemini-2.5-flash-lite-preview-06-17"
@@ -50,17 +56,9 @@ class Feedback(BaseModel):
     )
 
 
-# Augment the LLM with schema for structured output
-evaluator = llm.with_structured_output(Feedback)
-
-
-def enhance_node(state: State):
-    """
-    Enhances the user message to make it more understandable and clear.
-    """
-
-
+def define_user_task(state: State):
     audio_str = state.get("audio", None)
+    image_str = state.get("image", None)
     last_message = state["messages"][-1]
 
     user_task = last_message.content
@@ -70,6 +68,18 @@ def enhance_node(state: State):
         print(f"Audio file detected. Starting transcription for: {audio_file_path}")
         user_task = transcribe_audio_file(audio_file_path)
         print(f"Transcription result: {user_task}")
+
+    if image_str is not None:
+        image_file_path = bytes_to_image(image_str)
+    else:
+        image_file_path = None
+    return {"user_task": user_task, "image_file_path": image_file_path}
+
+def enhance_node(state: State):
+    """
+    Enhances the user message to make it more understandable and clear.
+    """
+    user_task = state["user_task"]
 
     structured_llm = llm.with_structured_output(EnhanceTextInstruction)
 
@@ -83,6 +93,33 @@ def enhance_node(state: State):
     print(f"Enhanced message: {enhanced_message}")
 
     return {"enhanced_message": enhanced_message, "language": result.language}
+
+def llm_call_router(state: State):
+    """Route the input to the appropriate node"""
+
+    router = llm.with_structured_output(Route)
+    user_task = state["enhanced_message"]
+
+    formatted_prompt = routing_instruction.format(
+        user_task=user_task,
+    )
+
+    decision = router.invoke(formatted_prompt)
+
+    return {"decision": decision.step}
+
+
+def route_decision(state: State):
+    image_file_path = state["image_file_path"]
+    if image_file_path is not None:
+        return "image_text_input"
+
+    if state["decision"] == "about_me":
+        return "about_me"
+    elif state["decision"] == "info":
+        return "llm_call_generator"
+    elif state["decision"] == "not_suitable":
+        return "not_suitable"
 
 
 def llm_call_generator(state: State):
@@ -114,6 +151,7 @@ def finalize_answer(state: State):
     AIMessage, allowing `langgraph` to stream the output.
     """
     context = state["contexts"][-1]
+    user_task = state["enhanced_message"]
     voice_output = state.get("voice_output", False) # Default to False if not present
     language = state["language"]
 
@@ -130,7 +168,7 @@ def finalize_answer(state: State):
     # Changed from ChatGoogleGenerativeAI to ChatOpenAI
     formatted_prompt = answer_instructions.format(
         current_date=get_current_date(),
-        research_topic=state["messages"][-1].content,
+        research_topic=user_task,
         summaries=context,
         language=language
     )
@@ -139,17 +177,104 @@ def finalize_answer(state: State):
 
     return {"messages": [AIMessage(content=response.content)]}
 
+def about_me(state: State):
+    user_task = state["enhanced_message"]
+
+    language = state["language"]
+
+    if language == "mkd":
+        language = "Macedonian"
+    elif language == "alb":
+        language = "Albanian"
+    elif language == "eng":
+        language = "English"
+
+    formatted_prompt = about_me_instructions.format(
+        user_task = user_task,
+        language= language
+    )
+    response = llm.invoke(formatted_prompt)
+    print(response.text)
+
+    return {"messages": [AIMessage(content=response.content)]}
+
+
+def not_suitable(state: State):
+    user_task = state["enhanced_message"]
+
+    language = state["language"]
+
+    if language == "mkd":
+        language = "Macedonian"
+    elif language == "alb":
+        language = "Albanian"
+    elif language == "eng":
+        language = "English"
+    formatted_prompt = not_capable_instruction.format(
+        user_task=user_task,
+        language=language
+    )
+    response = llm.invoke(formatted_prompt)
+    print(response.text)
+
+    return {"messages": [AIMessage(content=response.content)]}
+
+def image_text_input(state: State):
+    user_task = state["enhanced_message"]
+    image_file_path = state["image_file_path"]
+
+    language = state["language"]
+
+    if language == "mkd":
+        language = "Macedonian"
+    elif language == "alb":
+        language = "Albanian"
+    elif language == "eng":
+        language = "English"
+    formatted_prompt = image_text_instruction.format(
+        user_task=user_task,
+        language=language
+    )
+    response = multimodal_generation(image_file_path, formatted_prompt)
+    print(response.text)
+
+    return {"messages": [AIMessage(content=response.text)]}
+
 
 optimizer_builder = StateGraph(State)
 
 optimizer_builder.add_node("enhance_node", enhance_node)
 optimizer_builder.add_node("llm_call_generator", llm_call_generator)
 optimizer_builder.add_node("finalize_answer", finalize_answer)
+optimizer_builder.add_node("define_user_task", define_user_task)
+optimizer_builder.add_node("llm_call_router", llm_call_router)
+optimizer_builder.add_node("about_me", about_me)
+optimizer_builder.add_node("not_suitable", not_suitable)
+optimizer_builder.add_node("image_text_input", image_text_input)
 
-optimizer_builder.add_edge(START, "enhance_node")
-optimizer_builder.add_edge("enhance_node", "llm_call_generator")
+
+
+optimizer_builder.add_edge(START, "define_user_task")
+optimizer_builder.add_edge("define_user_task", "enhance_node")
+optimizer_builder.add_conditional_edges(
+    "llm_call_router",
+    route_decision,
+    {
+        "about_me": "about_me",
+        "not_suitable": "not_suitable",
+        "llm_call_generator": "llm_call_generator",
+        "image_text_input": "image_text_input",
+
+    },
+)
+optimizer_builder.add_edge("enhance_node", "llm_call_router")
 optimizer_builder.add_edge("llm_call_generator", "finalize_answer")
 optimizer_builder.add_edge("finalize_answer", END)
+optimizer_builder.add_edge("about_me", END)
+optimizer_builder.add_edge("not_suitable", END)
+optimizer_builder.add_edge("image_text_input", END)
+
+
 
 
 # Compile the workflow
