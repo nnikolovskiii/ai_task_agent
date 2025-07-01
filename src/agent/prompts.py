@@ -84,7 +84,7 @@ routing_instruction = """Your task is to analyze a given user message and classi
 
 *   **`info`**: Select this if the user is inquiring about the agent's services, offerings, seeking consulting, or requesting the agent to perform a specific task that falls within its capabilities.
 *   **`about_me`**: Select this if the user is asking questions specifically *about the agent itself*, such as its purpose, capabilities, identity, or how it works.
-*   **`not_suitable`**: Select this if and only if the user message is irrelevant, nonsensical, or completely outside the scope and purpose of the agent.
+*   **`not_suitable`**: Select this if and only if the user message is irrelevant, nonsensical, or completely outside the scope and purpose of the agent. Do this only if the user question is way too not suitable.
 
 **Output Format:**
 Return your response as a JSON object with the following exact keys:

@@ -18,7 +18,7 @@ from src.agent.file_utils import get_project_structure_as_string, concat_files_i
 from src.agent.models import FileReflectionList, SearchFilePathsList, EnhanceTextInstruction, Route
 from src.agent.prompts import file_planner_instructions, answer_instructions, \
     get_current_date, enhance_text_instruction, about_me_instructions, not_capable_instruction, routing_instruction, \
-    image_text_instruction
+    image_text_instruction, file_reflection_instructions
 
 load_dotenv()
 
@@ -27,7 +27,7 @@ load_dotenv()
 class State(TypedDict):
     messages: Annotated[list, add_messages]
     project_path: str
-    contexts: Annotated[list, operator.add]
+    context: str
     file_reflection: FileReflectionList
     all_file_paths: Annotated[set, lambda x, y: x.union(y)]
     audio_file: str
@@ -35,7 +35,7 @@ class State(TypedDict):
     voice_output: Optional[bool]
     language: str
     audio: str
-    user_task:str
+    user_task: str
     decision: str
     image: str
     image_file_path: str
@@ -75,6 +75,7 @@ def define_user_task(state: State):
         image_file_path = None
     return {"user_task": user_task, "image_file_path": image_file_path}
 
+
 def enhance_node(state: State):
     """
     Enhances the user message to make it more understandable and clear.
@@ -92,7 +93,12 @@ def enhance_node(state: State):
     enhanced_message = result.enhance_user_message
     print(f"Enhanced message: {enhanced_message}")
 
+    audio_str = state.get("audio", None)
+    if audio_str:
+        return {"enhanced_message": enhanced_message, "language": "mkd"}
+
     return {"enhanced_message": enhanced_message, "language": result.language}
+
 
 def llm_call_router(state: State):
     """Route the input to the appropriate node"""
@@ -117,12 +123,51 @@ def route_decision(state: State):
     if state["decision"] == "about_me":
         return "about_me"
     elif state["decision"] == "info":
-        return "llm_call_generator"
+        return "llm_file_explore"
     elif state["decision"] == "not_suitable":
         return "not_suitable"
 
 
-def llm_call_generator(state: State):
+def llm_call_evaluator(state: State):
+    """LLM evaluates the files in context and suggests additions/removals"""
+    last_message = state["messages"][-1]
+    project_path = state["project_path"]
+    context = state["context"]
+    all_file_paths = state["all_file_paths"]
+
+    project_structure = get_project_structure_as_string(project_path)
+    count = 0
+
+    while True:
+        structured_llm = llm.with_structured_output(FileReflectionList)
+        formatted_prompt = file_reflection_instructions.format(
+            user_task=last_message.content,
+            project_structure=project_structure,
+            context=context
+        )
+        count += 1
+        if count > 3:
+            return {"context", context}
+
+        result: FileReflectionList = structured_llm.invoke(formatted_prompt)
+        print(result)
+
+        if result.additional_file_paths is None:
+            break
+        new_files = [file_path for file_path in result.additional_file_paths if file_path not in all_file_paths]
+
+        if len(new_files) == 0:
+            break
+        else:
+            all_file_paths.update(set(new_files))
+            context = concat_files_in_str(list(all_file_paths))
+
+    print("*************************************")
+    print(context)
+    return {"file_reflection": result}
+
+
+def llm_file_explore(state: State):
     """
     Transcribes audio, then uses the text to find relevant files.
     """
@@ -142,7 +187,7 @@ def llm_call_generator(state: State):
     print("Invoking LLM to find relevant file paths...")
     result: SearchFilePathsList = structured_llm.invoke(formatted_prompt)
     context = concat_files_in_str(result.file_paths)
-    return {"contexts": [context], "all_file_paths": set(result.file_paths)}
+    return {"context": context, "all_file_paths": set(result.file_paths), "project_path": project_path}
 
 
 def finalize_answer(state: State):
@@ -150,9 +195,9 @@ def finalize_answer(state: State):
     This node is now a generator. It `yield`s each chunk of the response as an
     AIMessage, allowing `langgraph` to stream the output.
     """
-    context = state["contexts"][-1]
+    context = state["context"]
     user_task = state["enhanced_message"]
-    voice_output = state.get("voice_output", False) # Default to False if not present
+    voice_output = state.get("voice_output", False)  # Default to False if not present
     language = state["language"]
 
     if language == "mkd":
@@ -177,6 +222,7 @@ def finalize_answer(state: State):
 
     return {"messages": [AIMessage(content=response.content)]}
 
+
 def about_me(state: State):
     user_task = state["enhanced_message"]
 
@@ -190,8 +236,8 @@ def about_me(state: State):
         language = "English"
 
     formatted_prompt = about_me_instructions.format(
-        user_task = user_task,
-        language= language
+        user_task=user_task,
+        language=language
     )
     response = llm.invoke(formatted_prompt)
     print(response.text)
@@ -219,6 +265,7 @@ def not_suitable(state: State):
 
     return {"messages": [AIMessage(content=response.content)]}
 
+
 def image_text_input(state: State):
     user_task = state["enhanced_message"]
     image_file_path = state["image_file_path"]
@@ -244,15 +291,14 @@ def image_text_input(state: State):
 optimizer_builder = StateGraph(State)
 
 optimizer_builder.add_node("enhance_node", enhance_node)
-optimizer_builder.add_node("llm_call_generator", llm_call_generator)
+optimizer_builder.add_node("llm_file_explore", llm_file_explore)
 optimizer_builder.add_node("finalize_answer", finalize_answer)
 optimizer_builder.add_node("define_user_task", define_user_task)
 optimizer_builder.add_node("llm_call_router", llm_call_router)
 optimizer_builder.add_node("about_me", about_me)
 optimizer_builder.add_node("not_suitable", not_suitable)
 optimizer_builder.add_node("image_text_input", image_text_input)
-
-
+optimizer_builder.add_node("llm_call_evaluator", llm_call_evaluator)
 
 optimizer_builder.add_edge(START, "define_user_task")
 optimizer_builder.add_edge("define_user_task", "enhance_node")
@@ -262,22 +308,20 @@ optimizer_builder.add_conditional_edges(
     {
         "about_me": "about_me",
         "not_suitable": "not_suitable",
-        "llm_call_generator": "llm_call_generator",
+        "llm_file_explore": "llm_file_explore",
         "image_text_input": "image_text_input",
 
     },
 )
 optimizer_builder.add_edge("enhance_node", "llm_call_router")
-optimizer_builder.add_edge("llm_call_generator", "finalize_answer")
+optimizer_builder.add_edge("llm_file_explore", "llm_call_evaluator")
+optimizer_builder.add_edge("llm_call_evaluator", "finalize_answer")
+
 optimizer_builder.add_edge("finalize_answer", END)
 optimizer_builder.add_edge("about_me", END)
 optimizer_builder.add_edge("not_suitable", END)
 optimizer_builder.add_edge("image_text_input", END)
 
-
-
-
-# Compile the workflow
 graph = optimizer_builder.compile()  # Renamed from optimizer_workflow
 
 # # Invoke
