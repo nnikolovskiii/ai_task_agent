@@ -1,6 +1,6 @@
 from langgraph.pregel import Pregel
 
-from agent.graph import graph
+from agent.run_graph import graph
 
 
 def test_placeholder() -> None:

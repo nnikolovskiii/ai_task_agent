@@ -1,0 +1,233 @@
+Project path: /home/nnikolovskii/sandbox
+
+Project structure: 
+└── /home/nnikolovskii/sandbox/
+├── accountant-ui/
+│   ├── public/
+│   │   └── vite.svg
+│   ├── src/
+│   │   ├── assets/
+│   │   │   └── react.svg
+│   │   ├── components/
+│   │   │   ├── DashboardLayout.css
+│   │   │   ├── DashboardLayout.tsx
+│   │   │   └── ProtectedRoute.tsx
+│   │   ├── contexts/
+│   │   │   └── AuthContext.tsx
+│   │   ├── pages/
+│   │   │   ├── FileUploadDashboard.tsx
+│   │   │   ├── Login.tsx
+│   │   │   └── Register.tsx
+│   │   ├── App.css
+│   │   ├── App.tsx
+│   │   ├── index.css
+│   │   ├── main.tsx
+│   │   └── vite-env.d.ts
+│   ├── .gitignore
+│   ├── README.md
+│   ├── eslint.config.js
+│   ├── index.html
+│   ├── package-lock.json
+│   ├── package.json
+│   ├── tsconfig.app.json
+│   ├── tsconfig.json
+│   ├── tsconfig.node.json
+│   └── vite.config.ts
+├── accounting-agent/
+│   ├── src/
+│   │   └── accounting_agent/
+│   │       ├── ai/
+│   │       │   └── __init__.py
+│   │       ├── api/
+│   │       │   ├── routes/
+│   │       │   │   ├── __init__.py
+│   │       │   │   ├── auth.py
+│   │       │   │   └── files.py
+│   │       │   └── __init__.py
+│   │       ├── auth/
+│   │       │   ├── models/
+│   │       │   │   ├── __init__.py
+│   │       │   │   ├── file.py
+│   │       │   │   └── user.py
+│   │       │   ├── services/
+│   │       │   │   ├── __init__.py
+│   │       │   │   ├── password.py
+│   │       │   │   └── user.py
+│   │       │   └── __init__.py
+│   │       ├── databases/
+│   │       │   ├── __init__.py
+│   │       │   └── mongo_db.py
+│   │       ├── __init__.py
+│   │       ├── container.py
+│   │       └── main.py
+│   ├── tests/
+│   │   └── __init__.py
+│   ├── .env
+│   ├── Dockerfile
+│   ├── README.md
+│   ├── docker-compose.yml
+│   ├── poetry.lock
+│   └── pyproject.toml
+└── agent/
+    ├── src/
+    │   └── agent/
+    │       ├── core/
+    │       │   ├── __init__.py
+    │       │   ├── agent.py
+    │       │   ├── graph.py
+    │       │   └── state.py
+    │       ├── models/
+    │       │   ├── __init__.py
+    │       │   ├── models.py
+    │       │   └── schemas.py
+    │       ├── prompts/
+    │       │   ├── __init__.py
+    │       │   └── prompts.py
+    │       ├── tools/
+    │       │   ├── __init__.py
+    │       │   ├── file_utils.py
+    │       │   └── llm_tools.py
+    │       ├── __init__.py
+    │       ├── context.txt
+    │       ├── example.md
+    │       └── run_graph.py
+    ├── static/
+    │   └── studio_ui.png
+    ├── tests/
+    │   ├── integration_tests/
+    │   │   ├── __init__.py
+    │   │   └── test_graph.py
+    │   ├── unit_tests/
+    │   │   ├── __init__.py
+    │   │   └── test_configuration.py
+    │   └── conftest.py
+    ├── .codespellignore
+    ├── .env
+    ├── .gitignore
+    ├── LICENSE
+    ├── Makefile
+    ├── README.md
+    ├── langgraph.json
+    ├── poetry.lock
+    └── pyproject.toml
+
+Fetched files:
+================================================
+FILE: /home/nnikolovskii/sandbox/agent/src/agent/run_graph.py
+================================================
+from src.agent import graph
+
+# Set the PDF URL to process
+pdf_url = "http://79.125.164.129:5001/test/download/Tesla%20information.pdf"
+
+# Invoke the graph with the PDF URL
+state = graph.invoke({"file_url": pdf_url})
+
+
+================================================
+FILE: /home/nnikolovskii/sandbox/agent/src/agent/__init__.py
+================================================
+"""New LangGraph Agent.
+
+This module defines a custom graph.
+"""
+
+# Core components
+from .core.agent import llm_call, should_continue, tool_node
+from .core.graph import graph
+from .core.state import State
+
+# Tools
+from .tools.llm_tools import llm_with_tools, reasoner, str_replace, create_file, view_file
+from .tools.file_utils import get_project_structure_as_string, concat_files_in_str, concat_folder_to_file
+
+# Models
+from .models.models import SearchFilePathsList, FileReflectionList, EnhanceTextInstruction, Route
+from .models.schemas import SearchQueryList, Reflection
+
+# Prompts
+from .prompts.prompts import (
+    file_planner_instructions,
+    file_reflection_instructions,
+    final_instruction,
+    final_context_instruction,
+    make_plan_instruction,
+    get_current_date
+)
+
+
+================================================
+FILE: /home/nnikolovskii/sandbox/agent/src/agent/core/graph.py
+================================================
+from __future__ import annotations
+
+import os
+
+from dotenv import load_dotenv
+from langgraph.constants import START, END
+from langgraph.graph import StateGraph
+
+from google import genai
+from google.genai import types
+import httpx
+
+from src.agent import State
+
+load_dotenv()
+api_key = os.getenv("GEMINI_API_KEY")
+
+
+def process_pdf_with_gemini(state: State):
+    """
+    Retrieves a PDF from a URL and processes it with Google's Gemini model.
+    """
+    doc_url = state["file_url"]
+
+    # Initialize the Google Gemini client
+    client = genai.Client(api_key)
+
+    # Retrieve and encode the PDF bytes
+    doc_data = httpx.get(doc_url).content
+
+    prompt = "Summarize this document"
+    response = client.models.generate_content(
+        model="gemini-2.5-flash",
+        contents=[
+            types.Part.from_bytes(
+                data=doc_data,
+                mime_type='application/pdf',
+            ),
+            prompt
+        ]
+    )
+
+    print(response.text)
+    return {}
+
+# Create the graph
+optimizer_builder = StateGraph(State)
+
+# Add the PDF processing node
+optimizer_builder.add_node("process_pdf_with_gemini", process_pdf_with_gemini)
+
+# Connect the node to the graph
+optimizer_builder.add_edge(START, "process_pdf_with_gemini")
+optimizer_builder.add_edge("process_pdf_with_gemini", END)
+
+graph = optimizer_builder.compile()
+
+
+================================================
+FILE: /home/nnikolovskii/sandbox/agent/src/agent/core/state.py
+================================================
+from __future__ import annotations
+
+from typing import TypedDict
+
+
+# Graph state
+class State(TypedDict):
+    file_url: str
+
+
+
