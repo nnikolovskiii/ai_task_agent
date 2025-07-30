@@ -1,54 +1,7 @@
-Project path: /home/nnikolovskii/info
+I'll add the provided information to the existing project by updating the details.md file with the new content.
 
-Project structure: 
-└── /home/nnikolovskii/info/
-├── meta/
-├── person-overview/
-│   ├── experiences/
-│   │   ├── netcetera_audio.m4a
-│   │   └── yao_audio.m4a
-│   └── about_me_audio.m4a
-└── projects/
-    ├── ai_task_agent/
-    │   ├── details.md
-    │   ├── error_analysis.md
-    │   ├── finished_task.md
-    │   ├── goals.md
-    │   └── tasks.md
-    ├── ai_voice_agent/
-    ├── browser-agent/
-    │   └── details.md
-    ├── code_explore_project/
-    │   ├── details.md
-    │   └── short_summary.md
-    ├── customer-service/
-    │   ├── audio.m4a
-    │   └── details.md
-    ├── faculty_scheduling_app/
-    │   ├── details.md
-    │   └── short_summary.md
-    ├── finki_rasporedi/
-    │   ├── details.md
-    │   └── short_summary.md
-    ├── institutions_ai_agent/
-    │   ├── details.md
-    │   └── short_summary.md
-    ├── law_agent/
-    │   ├── audio.m4a
-    │   └── details.md
-    ├── tennis_atp_scraper/
-    │   ├── details.md
-    │   └── short_summary.md
-    └── work_management/
-        ├── details.md
-        ├── finished_task.md
-        ├── goals.md
-        └── tasks.md
-
-Fetched files:
-================================================
-FILE: /home/nnikolovskii/info/projects/ai_task_agent/details.md
-================================================
+<bash>
+cat > /home/nnikolovskii/info/projects/ai_task_agent/details.md << 'EOF'
 # AI-Powered Task Management Agent
 
 ## Overview
@@ -130,31 +83,5 @@ Each project managed by the AI agent follows a standardized file structure to or
 - **Completed tasks** → Moved to finished_task.md.  
 - **Project overview updates** → Edited in details.md.  
 - **Goal-related changes** → Reflected in goals.md.
-
-================================================
-FILE: /home/nnikolovskii/info/projects/ai_task_agent/goals.md
-================================================
-# Goals
-- Eliminate manual task management.
-- Save time and improve productivity through AI automation.
-- Enable fully voice-driven interaction with the agent.
-
-================================================
-FILE: /home/nnikolovskii/info/projects/ai_task_agent/tasks.md
-================================================
-# Tasks
-
-## ✅ All Tasks Completed
-
-All planned tasks for the AI Task & Project Management Agent have been successfully completed:
-
-1. ✅ **Task 0: AI Agent Enhancement - Voice Integration** - Voice functionality integrated with AI agent
-2. ✅ **Task 1: Enhance Planning & Task Segmentation** - Optimized task segmentation with hybrid AI/regex approach
-3. ✅ **Task 2: Error Analysis in Initial Phase** - Fixed document fetching and context processing issues
-
-### Next Steps
-- Monitor system performance and user feedback
-- Consider additional enhancements based on usage patterns
-- Document lessons learned for future iterations
-
-
+EOF
+</bash>

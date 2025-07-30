@@ -415,3 +415,5 @@ def remove_comments_from_python_code(code: str) -> str:
         i += 1
 
     return ''.join(result)
+
+print(get_project_structure_as_string("/home/nnikolovskii/dev/reliabl.it/frontend"))

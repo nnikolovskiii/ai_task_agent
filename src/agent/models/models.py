@@ -37,3 +37,9 @@ class Route(BaseModel):
     rationale: str = Field(
         description="A brief explanation of why these file_paths could prove relevant to the user's task."
     )
+
+
+class InputType(BaseModel):
+    input_type: Literal["question", "task"] = Field(
+        description="Determination of whether the user input is a question or a task."
+    )
