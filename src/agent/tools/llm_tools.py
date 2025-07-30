@@ -5,12 +5,14 @@ import os
 import subprocess
 from typing import Callable
 
+from agent.core.ai_models import kimi_llm
 from bash_client.client import bash_executor
 
 load_dotenv()
 
+
 @tool
-def str_replace(old_str: str, new_str: str, file_path: str):
+def str_replace(old_str: str, new_str: str, file_path: str) -> str:
     """Replaces text in a file with new text.
 
     Notes for using the `str_replace` command:
@@ -22,31 +24,35 @@ def str_replace(old_str: str, new_str: str, file_path: str):
         old_str: The exact text to be replaced in the file
         new_str: The new text that will replace the old text
         file_path: Path to the file where the replacement will be performed
+
+    Returns:
+        A message indicating success or failure of the operation
     """
     try:
         with open(file_path, 'r') as f:
             content = f.read()
     except FileNotFoundError:
-        raise FileNotFoundError(f"Error: The file '{file_path}' was not found.")
+        return f"Error: The file '{file_path}' was not found."
 
     # Check for the uniqueness of old_str
     occurrence_count = content.count(old_str)
 
     if occurrence_count == 0:
-        raise ValueError(f"Error: The text to be replaced (old_str) was not found in {file_path}.")
+        return f"Error: The text to be replaced (old_str) was not found in {file_path}."
 
     if occurrence_count > 1:
-        raise ValueError(
-            f"Error: The text to be replaced (old_str) is not unique in {file_path}. Found {occurrence_count} occurrences.")
+        return f"Error: The text to be replaced (old_str) is not unique in {file_path}. Found {occurrence_count} occurrences."
 
     # Perform the replacement
     new_content = content.replace(old_str, new_str)
 
     # Write the new content back to the file
-    with open(file_path, 'w') as f:
-        f.write(new_content)
-
-    print(f"Successfully replaced text in {file_path}")
+    try:
+        with open(file_path, 'w') as f:
+            f.write(new_content)
+        return f"Successfully replaced text in {file_path}"
+    except Exception as e:
+        return f"Error writing to file '{file_path}': {e}"
 
 
 @tool
@@ -63,13 +69,11 @@ def run_bash_command(command: str) -> str:
     Returns:
         A string containing the combined stdout and stderr of the command.
     """
-
     return bash_executor.execute(command)
 
 
-
 @tool
-def create_file(file_path: str, file_text: str):
+def create_file(file_path: str, file_text: str) -> str:
     """Creates a new file with the specified content.
 
     This tool allows you to create new files in the filesystem.
@@ -78,6 +82,9 @@ def create_file(file_path: str, file_text: str):
     Args:
         file_path: The path where the file should be created
         file_text: The content to write to the file
+
+    Returns:
+        A message indicating success or failure of the operation
     """
     try:
         # Ensure parent directories exist
@@ -87,9 +94,9 @@ def create_file(file_path: str, file_text: str):
 
         with open(file_path, 'w') as f:
             f.write(file_text)
-        print(f"File '{file_path}' created successfully.")
+        return f"File '{file_path}' created successfully."
     except Exception as e:
-        raise IOError(f"Error creating file '{file_path}': {e}")
+        return f"Error creating file '{file_path}': {e}"
 
 
 @tool
@@ -103,22 +110,17 @@ def view_file(file_path: str) -> str:
         file_path: The path to the file to be read
 
     Returns:
-        The content of the file as a string
+        The content of the file as a string, or an error message if the file cannot be read
     """
     try:
         with open(file_path, 'r') as f:
             return f.read()
     except FileNotFoundError:
-        raise FileNotFoundError(f"Error: The file '{file_path}' was not found.")
+        return f"Error: The file '{file_path}' was not found."
     except Exception as e:
-        raise IOError(f"Error reading file '{file_path}': {e}")
-
-model_name = "gemini-2.5-pro"
-
-reasoner = ChatGoogleGenerativeAI(model=model_name)
-faster_model = ChatGoogleGenerativeAI(model="gemini-2.5-flash")
+        return f"Error reading file '{file_path}': {e}"
 
 
 tools = [str_replace, run_bash_command, create_file, view_file]
 tools_by_name = {tool.name: tool for tool in tools}
-llm_with_tools = faster_model.bind_tools(tools)
+llm_with_tools = kimi_llm.bind_tools(tools)

@@ -29,7 +29,7 @@ It behaves like a personalized operating system, offering both voice and text in
 - Eliminate manual task management  
 - Save time and improve productivity through AI automation  
 
----
+---  
 
 ### **AI Task & Project Management Agent**  
 
@@ -67,17 +67,21 @@ The project is an AI-powered agent designed to manage tasks, projects, and goals
 - Speed: Describing complex tasks verbally is faster than typing.  
 - Scalability: Handles large inputs more effectively than text-based methods.  
 
----
+---  
 
 Project structure:
 Each project managed by the AI agent follows a standardized file structure to organize tasks, progress, and goals. Here's how it works:  
 
 #### Core Project Files  
-1. **task.md** – Contains active tasks (new, in-progress, or pending modifications).  
-2. **finished_task.md** – Stores completed tasks (moved from task.md when marked as done).  
-3. **details.md** (or overview.md) – Holds project descriptions, summaries, and upgoals.md**goals.md** – Tracks high-level objectives and how tasks align with thHow the AI Agent Handles Requestss ReqNew/modified tasksfied tasks** → Updated in task.md.  
+1. **tasks.md** – Contains active tasks (new, in-progress, or pending modifications).  
+2. **finished_task.md** – Stores completed tasks (moved from tasks.md when marked as done).  
+3. **details.md** – Holds project descriptions, summaries, and updates.  
+4. **goals.md** – Tracks high-level objectives and how tasks align with them.
+
+#### How the AI Agent Handles Requests  
+- **New/modified tasks** → Updated in tasks.md.  
 - **Completed tasks** → Moved to finished_task.md.  
-- **Project overview updates** → Edited in details.md (or overview.md).  
+- **Project overview updates** → Edited in details.md.  
 - **Goal-related changes** → Reflected in goals.md.
 EOF
 </bash>
