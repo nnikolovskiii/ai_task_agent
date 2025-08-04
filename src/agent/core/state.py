@@ -21,3 +21,4 @@ class State(TypedDict):
     task_message_indices: Dict[int, int]
     input_type: str
     answer: str
+    agent_metadata: str

@@ -5,7 +5,7 @@ from typing import List
 DEFAULT_IGNORE_PATTERNS = {'.git', '.venv', ".idea", ".pytest_cache",
                            '.git', '__pycache__', ".angular",
                            ".github", ".vscode", "dist", "node_modules",
-                           ".chainlit", ".files", ".junie", ".langgraph_api"}
+                           ".chainlit", ".files", ".junie", ".langgraph_api", ".env", "agent_metadata.md"}
 
 
 def get_project_structure_as_string(folder_path, ignore_patterns=None):
@@ -90,7 +90,7 @@ def get_project_structure_as_string(folder_path, ignore_patterns=None):
 from pathlib import Path
 from typing import List
 import re
-from pypdf import PdfReader # New import for PDF handling
+from pypdf import PdfReader
 
 def read_file(file_path: str) -> str | None:
     """
@@ -416,4 +416,63 @@ def remove_comments_from_python_code(code: str) -> str:
 
     return ''.join(result)
 
-print(get_project_structure_as_string("/home/nnikolovskii/dev/reliabl.it/frontend"))
+def concat_agent_metadata(folder_path: str, ignore_patterns=None) -> str:
+    """
+    Finds all 'agent_metadata.md' files within a folder and its subfolders,
+    concatenates their contents into a single string, each prefixed by its path.
+
+    Args:
+        folder_path (str): The path to the root folder to search.
+        ignore_patterns (set, optional): A set of directory/file basenames to ignore.
+                                         Defaults to DEFAULT_IGNORE_PATTERNS.
+
+    Returns:
+        str: The concatenated content of all found 'agent_metadata.md' files,
+             each preceded by its file path, or an empty string if none are found
+             or errors occur.
+    """
+    final_ignore_patterns = DEFAULT_IGNORE_PATTERNS if ignore_patterns is None else ignore_patterns
+
+    # Validate folder path
+    if not os.path.exists(folder_path):
+        print(f"Error: The path '{folder_path}' does not exist.")
+        return ""
+    if not os.path.isdir(folder_path):
+        print(f"Error: The path '{folder_path}' is not a directory.")
+        return ""
+
+    result_lines = []
+    target_filename = "agent_metadata.md"
+
+    try:
+        # Walk the directory tree
+        for current_root, dir_names, file_names in os.walk(folder_path, topdown=True):
+            # Modify dir_names in-place to skip ignored directories
+            dir_names[:] = [d for d in dir_names if d not in final_ignore_patterns]
+
+            # Check if the target file exists in the current directory
+            if target_filename in file_names and target_filename not in final_ignore_patterns:
+                file_path = os.path.join(current_root, target_filename)
+                full_file_path = Path(file_path)
+
+                # Attempt to read the file content
+                try:
+                    with open(full_file_path, 'r', encoding='utf-8') as f:
+                        content = f.read()
+                    # Append the path and content to the result
+                    result_lines.append(f"{file_path}: ")
+                    result_lines.append(content)
+                    # Add a newline at the end for separation if needed
+                    # result_lines.append("") # Optional: extra blank line between files
+                except Exception as e:
+                    print(f"Warning: Could not read file '{file_path}': {e}")
+
+        # Join all parts with newlines
+        return "\n".join(result_lines)
+
+    except Exception as e:
+        print(f"An unexpected error occurred while scanning '{folder_path}': {e}")
+        return ""
+
+lol = get_project_structure_as_string("/home/nnikolovskii/notes")
+print(lol)

@@ -1,1 +1,22 @@
-The AI Task Agent project is a voice-first, AI-driven virtual assistant that automates task, project, and goal management. It acts like a personalized operating system, allowing users to manage their work through voice commands (with text as a fallback), eliminating the need for manual task management. The agent creates, updates, and deletes tasks automatically, stores relevant information, and organizes everything in a dedicated file system under `/home/nnikolovskii/info`. It uses natural-language understanding and learns user behavior to proactively manage tasks. Currently in testing, it runs in Docker containers and uses Telegram for voice input, with potential for future integrations like custom dashboards or other interfaces.
+Based on the project files, you are currently working on **two active projects**:
+
+## 1. **AI Task Agent** (Recently Completed)
+- **Status**: All planned tasks completed today
+- **What it is**: A voice-first AI assistant that automates task/project management
+- **Recent achievements**:
+  - ✅ Integrated voice functionality with AI agent
+  - ✅ Enhanced task segmentation (40% speed improvement)
+  - ✅ Fixed critical errors (90% reduction in failures)
+- **Next**: Monitoring performance and gathering user feedback
+
+## 2. **Work Management System** (Currently Active)
+- **Status**: 5 active tasks in progress
+- **Current focus**: Backend/frontend refactoring and system optimization
+- **Active tasks**:
+  - Moving name entries from frontend to backend
+  - Frontend code refactoring
+  - Improving database naming conventions
+  - Implementing message management for AI model
+  - Expanding to multiple data sources
+
+The **Work Management System** appears to be your immediate focus, with critical backend migration and frontend refactoring tasks currently in progress.
