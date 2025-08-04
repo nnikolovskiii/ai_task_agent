@@ -1,83 +1,145 @@
-I'll add the provided information to the existing project by updating the details.md file with the new content.
+I'll update the work management project files based on the provided work update.
 
 <bash>
-cat > /home/nnikolovskii/info/projects/ai_task_agent/details.md << 'EOF'
-# AI-Powered Task Management Agent
+# Update tasks.md with new tasks from the work update
+cat > /home/nnikolovskii/notes/projects/work_management/tasks.md << 'EOF'
+# Work Tasks
 
-## Overview
-A voice-first, AI-driven virtual assistant that automates task, project, and goal management.  
-It behaves like a personalized operating system, offering both voice and text interaction.
+## Active Tasks
 
-## Key Features
-1. **Voice & Text Input**  
-   - Primary: voice commands  
-   - Fallback: text input  
+### Task: Move Name Entries from Frontend to Backend
+**Status:** New
+**Priority:** Critical
+**Due Date:** 2024-12-31
+**Description:** Move name display and management logic from frontend to backend for better structure and efficiency
+**Notes:** Need to research implementation approach for backend change
 
-2. **Automated Task Management**  
-   - Creates / updates / deletes tasks automatically  
-   - Extracts and stores relevant information  
+### Task: Frontend Code Refactoring
+**Status:** New
+**Priority:** Critical
+**Due Date:** 2024-12-31
+**Description:** Review and refactor frontend code for better performance, readability, and maintainability
+**Notes:** General cleanup and optimization needed
 
-3. **Personalized File System**  
-   - Dedicated virtual workspace under `/home/nnikolovskii/info`  
-   - Tracks tasks, projects, and long-term goals in a unified structure  
+### Task: Improve Database Table and Entity Naming
+**Status:** New
+**Priority:** High
+**Due Date:** 2024-12-31
+**Description:** Propose better, more descriptive naming conventions for database tables and entities
+**Notes:** Focus on enhancing readability and maintainability
 
-4. **Smart Assistance**  
-   - Natural-language understanding  
-   - Learns user behavior for proactive management  
+### Task: Add Button to Weekly Research Report Dashboard
+**Status:** New
+**Priority:** High
+**Due Date:** 2024-12-31
+**Description:** Add a button that directly navigates to the Weekly Research Report Dashboard from the Detailed Entry Dashboard
+**Notes:** Should provide easier access between the two research dashboards
 
-## Goals
-- Eliminate manual task management  
-- Save time and improve productivity through AI automation  
+### Task: Implement Message Management for the Model
+**Status:** New
+**Priority:** High
+**Due Date:** 2024-12-31
+**Description:** Create a system to filter or prioritize relevant messages sent to the model
+**Notes:** Need to implement iterative processing or modular architecture approach
 
----
+### Task: Expand Data Source Connections
+**Status:** New
+**Priority:** Medium
+**Due Date:** 2024-12-31
+**Description:** Integrate system with multiple data sources instead of single source
+**Notes:** Discuss with manager to determine optimal implementation strategy
 
-### **AI Task & Project Management Agent**  
+## Pending Tasks
+- None currently
 
-#### **Overview**  
-The project is an AI-powered agent designed to manage tasks, projects, and goals efficiently. It provides a structured way to organize workflows while allowing intuitive voice-based interaction for quick input.  
+## Blocked Tasks
+- None currently
+EOF
 
-#### **Key Features**  
-1. **Task & Project Management**  
-   - Creates and tracks tasks, goals, and project overviews.  
-   - Organizes each project in a dedicated folder within a structured file system.  
+# Update details.md with the work update information
+cat > /home/nnikolovskii/notes/projects/work_management/details.md << 'EOF'
+# Work Management System Overview
 
-2. **Voice-Based Interaction**  
-   - Users can describe tasks or commands via voice input, enabling faster and more natural communication than text.  
-   - Ideal for handling large amounts of information efficiently.  
+## Purpose
+This system provides a structured approach to organize and track work-related tasks, goals, and progress.
 
-3. **File System & Tool Integration**  
-   - Operates within a mini file-based "operating system" where it:  
-     - Navigates, reads, and writes files.  
-     - Executes commands as needed.  
-   - Users can later review or extract data from this file system.  
+## How to Use This System
 
-4. **Modular & Extensible Design**  
-   - Currently runs in Docker containers for easy deployment.  
-   - No dedicated UI yet, but open for customization (e.g., integrating other interfaces).  
-   - Currently linked to Telegram for voice input during testing.  
+### Daily Workflow
+1. Review `tasks.md` for active tasks
+2. Update task statuses as needed
+3. Add new tasks as they arise
+4. Move completed tasks to `finished_task.md`
 
-#### **Current Stage & Future Potential**  
-- In **testing phase**, with Telegram serving as the primary input method.  
-- Designed for reusability—others can adapt the Docker setup or build their own UI.  
-- Potential expansions:  
-  - Custom dashboards or integrations (e.g., Slack, web apps).  
-  - Enhanced automation features (e.g., AI-driven prioritization).  
+### Weekly Review
+1. Review all active tasks
+2. Update priorities based on current needs
+3. Check progress against goals in `goals.md`
+4. Identify any blocked or pending tasks that need attention
 
-#### **Why Voice Input?**  
-- Speed: Describing complex tasks verbally is faster than typing.  
-- Scalability: Handles large inputs more effectively than text-based methods.  
+### Monthly Planning
+1. Review completed tasks in `finished_task.md`
+2. Assess progress on goals
+3. Update goals as needed
+4. Plan next month's priorities
 
----
+## File Structure
+- **tasks.md**: Active tasks (new, in-progress, pending)
+- **finished_task.md**: Completed tasks with completion dates
+- **goals.md**: Short, medium, and long-term objectives
+- **details.md**: This overview document
 
-Project structure:
-Each project managed by the AI agent follows a standardized file structure to organize tasks, progress, and goals. Here's how it works:  
+## Task Status Definitions
+- **New**: Task created but not started
+- **In-Progress**: Currently being worked on
+- **Pending**: Waiting for dependencies or approval
+- **Blocked**: Cannot proceed due to external factors
 
-#### Core Project Files  
-1. **task.md** – Contains active tasks (new, in-progress, or pending modifications).  
-2. **finished_task.md** – Stores completed tasks (moved from task.md when marked as done).  
-3. **details.md** (or overview.md) – Holds project descriptions, summaries, and upgoals.md**goals.md** – Tracks high-level objectives and how tasks align with thHow the AI Agent Handles Requestss ReqNew/modified tasksfied tasks** → Updated in task.md.  
-- **Completed tasks** → Moved to finished_task.md.  
-- **Project overview updates** → Edited in details.md (or overview.md).  
-- **Goal-related changes** → Reflected in goals.md.
+## Recent Updates
+
+### Chat Interface Improvements - Completed
+- Redesigned the chat interface to enhance its visual appeal and usability
+- The new design is a significant improvement over the previous version
+- Minor refinements may still be needed
+
+### Next Steps Identified
+1. **Message Management for the Model**
+   - Currently, all messages are sent to the model, but only some are necessary
+   - Need to implement a system to filter or prioritize relevant messages
+   - Possible approaches: iterative processing or modular yet simple architecture
+
+2. **Expanding Data Source Connections**
+   - The system currently connects to a single source but should integrate with multiple sources
+   - Key considerations: how monitoring gaps align with research topics and best practices for multi-source integration
+   - Next action: Discuss with manager to determine the optimal implementation strategy
+EOF
+
+# Update goals.md to reflect new objectives
+cat > /home/nnikolovskii/notes/projects/work_management/goals.md << 'EOF'
+# Work Goals
+
+## Short-term Goals (1-4 weeks)
+- [ ] Complete backend migration of name entries
+- [ ] Implement improved database naming conventions
+- [ ] Add navigation button to weekly dashboard
+- [ ] Complete frontend code refactoring
+- [ ] Implement message management system for model
+- [ ] Design multi-source data integration approach
+
+## Medium-term Goals (1-3 months)
+- [ ] Optimize system performance post-refactoring
+- [ ] Establish consistent naming standards across all projects
+- [ ] Implement multi-source data source connections
+- [ ] Refine chat interface based on user feedback
+
+## Long-term Goals (3-12 months)
+- [ ] Maintain clean, scalable codebase
+- [ ] Implement automated testing for refactored components
+- [ ] Expand system capabilities with multiple data sources
+
+## Goal Progress Tracking
+- **Current Focus:** Backend migration and frontend refactoring
+- **Next Milestone:** Complete all active tasks
+- **Potential Obstacles:** Research needed for backend implementation and multi-source integration strategy
 EOF
 </bash>

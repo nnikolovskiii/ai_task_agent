@@ -169,3 +169,9 @@ Below you will be given your action history of the current step for you to know 
 # Action history:
 {action_history}
 """
+
+commit_message_instruction = """Generate a commit message that will be used to commit the changes to the Git repository.
+
+# Task:
+{user_task}
+"""

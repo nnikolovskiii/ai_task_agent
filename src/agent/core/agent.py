@@ -72,7 +72,7 @@ def llm_call(state: State):
     }
 
 
-def should_continue(state: State) -> Literal["environment", "next_step", END]:
+def should_continue(state: State) -> Literal["environment", "next_step", "push_to_git"]:
     """Decide if we should continue the loop or stop based upon whether the LLM made a tool call"""
 
     messages = state["messages"]
@@ -90,7 +90,7 @@ def should_continue(state: State) -> Literal["environment", "next_step", END]:
         return "next_step"
 
     # No more steps, end the workflow
-    return END
+    return "push_to_git"
 
 
 def tool_node(state: dict):
