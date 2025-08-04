@@ -18,10 +18,12 @@ def segment_into_steps(state: State):
     Segment the plan into steps.
     """
     plan = state["plan"]
+    agent_metadata = state["agent_metadata"]
 
     from ..prompts.prompts import segment_plan_into_steps
     formatted_prompt = segment_plan_into_steps.format(
-        plan=plan
+        plan=plan,
+        agent_metadata=agent_metadata,
     )
 
     structured_llm = kimi_llm.with_structured_output(StepList)

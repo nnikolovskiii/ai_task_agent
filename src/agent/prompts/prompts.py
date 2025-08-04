@@ -105,46 +105,27 @@ Fetched files:
 
 final_context_instruction = """Project path: {project_path}
 
-Project structure: 
+# Project structure: 
 {project_structure}
 
-Fetched files:
+# Fetched files:
 {context}
 """
 
-make_plan_instruction = """You are a helpful assistant which job is to manage the information provided by the user.
+make_plan_instruction = """You are a helpful AI agent.
 
-Instructions:
-- You can make edits, delete files, create new ones.
-- You are not tasked with writing code. Instead, your primary responsibilities involve managing and organizing textual content within files.  
-- You should not add anything outside of what the user asks of you.
-- Do not provide any recommendations.
+# Agent Metadata - these are instructions that you need to follow. 
+{agent_metadata}
 
 User message: {user_task}
 
-Project structure:
-Each project managed by the AI agent follows a standardized file structure to organize tasks, progress, and goals. Hereâ€™s how it works:  
-
-#### Core Project Files  
-1. **task.md** â€“ Contains active tasks (new, in-progress, or pending modifications).  
-2. **finished_task.md** â€“ Stores completed tasks (moved from task.md when marked as done).  
-3. **details.md** (or overview.md) â€“ Holds project descriptions, summaries, and upgoals.md**goals.md** â€“ Tracks high-level objectives and how tasks align with thHow the AI Agent Handles Requestss ReqNew/modified tasksfied tasks** â†’ Updated in task.md.  
-- **Completed tasks** â†’ Moved to finished_task.md.  
-- **Project overview updates** â†’ Edited in details.md (or overview.md).  
-- **Goal-related changes** â†’ Reflected in goals.md.
-
-
-Context:
 {context}
 """
 
 segment_plan_into_steps = """Below is a given plan of actions. Your job is to detect the steps that need to be performed and return them in a JSON object.
 
-Instructions:
-- You are not tasked with writing code. Instead, your primary responsibilities involve managing and organizing textual content within files.  
-- Do not make up or create any steps by yourself.
-- Do not provide any recommendations.
-- You should not add anything outside of what the user asks of you.- You are not tasked with writing code. Instead, your primary responsibilities involve managing and organizing textual content within files.  
+# Agent Metadata - these are instructions that you need to follow. 
+{agent_metadata}
 
 # Plan:
 {plan}

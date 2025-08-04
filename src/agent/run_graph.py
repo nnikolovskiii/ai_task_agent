@@ -6,28 +6,11 @@ from agent.core.configs import graph
 project_path = "/home/nnikolovskii/notes"
 
 
-user_task = """### Work Update: Chat Interface Improvements & Next Steps  
+user_task = """Do not write code. For AI tasks project tasks: 
 
-#### **Completed Work**  
-- Redesigned the chat interface to enhance its visual appeal and usability.  
-- The new design is a significant improvement over the previous version, though minor refinements may still be needed.  
-
-#### **Next Steps**  
-1. **Message Management for the Model**  
-   - Currently, all messages are sent to the model, but only some are necessary.  
-   - Need to implement a system to filter or prioritize relevant messages.  
-   - Possible approaches:  
-     - Iterative processing  
-     - Modular yet simple architecture (balancing flexibility and ease of use)  
-
-2. **Expanding Data Source Connections**  
-   - The system currently connects to a single source but should integrate with multiple sources.  
-   - Key considerations:  
-     - How monitoring gaps align with research topics  
-     - Best practices for multi-source integration  
-   - Next action: Discuss with my manager to determine the optimal implementation strategy.  
-
----  """
+- the voice thing isnt integrated with the app. it say completed but it is not.
+- i need a way to track how much it costs to run every task and logs on how long the tasks is and so on so on.
+"""
 
 
 config = RunnableConfig(recursion_limit=250)

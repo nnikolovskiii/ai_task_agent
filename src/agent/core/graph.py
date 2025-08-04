@@ -10,8 +10,8 @@ from .ai_models import kimi_llm, gemini_flash_lite
 from .state import State
 from ..prompts.prompts import final_context_instruction, make_plan_instruction, input_type_determination_prompt, \
     answer_question_prompt, commit_message_instruction
-from ..tools.file_utils import get_project_structure_as_string, concat_files_in_str
-from ..models.models import FileReflectionList, SearchFilePathsList, InputType
+from ..tools.file_utils import get_project_structure_as_string, concat_files_in_str, concat_agent_metadata
+from ..models.models import FileReflectionList, SearchFilePathsList
 from ..prompts.prompts import file_planner_instructions, file_reflection_instructions
 from ..utils.git_tools import git_commit_push
 
@@ -83,8 +83,7 @@ def llm_call_evaluator(state: State):
         if len(new_files) == 0:
             break
         else:
-            # Filter out .env files from new files before adding them
-            filtered_new_files = [path for path in new_files if not path.endswith('.env')]
+            filtered_new_files = [path for path in new_files if not path.endswith('.env') and "agent_metadata.md" not in path]
             all_file_paths.update(set(filtered_new_files))
             context = concat_files_in_str(list(all_file_paths))
 
@@ -95,10 +94,11 @@ def llm_call_evaluator(state: State):
 
 def build_context(state: State):
     """LLM evaluates the files in context and suggests additions/removals"""
-    user_task = state["user_task"]
     project_structure = state["project_structure"]
     context = state["context"]
     project_path = state["project_path"]
+
+    agent_metadata = concat_agent_metadata(project_path)
 
     final_context = final_context_instruction.format(
         context=context,
@@ -109,7 +109,7 @@ def build_context(state: State):
     output_path = os.path.join(os.getcwd(), 'context.txt')
     with open(output_path, 'w', encoding='utf-8') as output_file:
         output_file.write(final_context)
-    return {"context": final_context}
+    return {"context": final_context, "agent_metadata": agent_metadata}
 
 
 def determine_input_type(state: State):
@@ -164,10 +164,13 @@ def make_plan(state: State):
     """Plan the changes"""
     user_task = state["user_task"]
     context = state["context"]
+    agent_metadata = state["agent_metadata"]
+
 
     instruction = make_plan_instruction.format(
         user_task=user_task,
         context=context,
+        agent_metadata=agent_metadata
     )
 
     result = kimi_llm.invoke(instruction)
