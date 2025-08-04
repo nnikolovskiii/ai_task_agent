@@ -1,18 +1,19 @@
 from __future__ import annotations
 
 import os
-from typing import Literal
 
 from dotenv import load_dotenv
 from langchain_core.messages import HumanMessage
 from pydantic import BaseModel, Field
 
-from .ai_models import kimi_llm, deepseek_llm, gemini_flash_lite
+from .ai_models import kimi_llm, gemini_flash_lite
 from .state import State
-from ..prompts.prompts import final_context_instruction, make_plan_instruction, input_type_determination_prompt, answer_question_prompt
+from ..prompts.prompts import final_context_instruction, make_plan_instruction, input_type_determination_prompt, \
+    answer_question_prompt, commit_message_instruction
 from ..tools.file_utils import get_project_structure_as_string, concat_files_in_str
 from ..models.models import FileReflectionList, SearchFilePathsList, InputType
 from ..prompts.prompts import file_planner_instructions, file_reflection_instructions
+from ..utils.git_tools import git_commit_push
 
 load_dotenv()
 
@@ -177,3 +178,23 @@ def make_plan(state: State):
     plan = result.content.split("</think>")[-1]
 
     return {"messages": [HumanMessage(content=result.content)], "plan": plan}
+
+class CommitMessage(BaseModel):
+    message: str = Field(..., description="Commit message")
+
+
+def push_to_git(state: State):
+    """Push to git"""
+    user_task = state["user_task"]
+
+
+    structured_model = gemini_flash_lite.with_structured_output(CommitMessage)
+    formatted_prompt = commit_message_instruction.format(
+        user_task=user_task,
+    )
+
+    commit_message = structured_model.invoke(formatted_prompt)
+
+    git_commit_push("/home/nnikolovskii/notes", commit_message.message)
+
+    return {}

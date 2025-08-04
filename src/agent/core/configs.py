@@ -2,9 +2,10 @@ from langgraph.constants import START, END
 from langgraph.graph import StateGraph
 from typing import Literal
 
-from .state import State
-from .agent import llm_call, tool_node, should_continue, segment_into_steps, next_step
-from .graph import llm_file_explore, llm_call_evaluator, build_context, make_plan, determine_input_type, answer_question
+from src.agent.core.state import State
+from src.agent.core.agent import llm_call, tool_node, should_continue, segment_into_steps, next_step
+from src.agent.core.graph import llm_file_explore, llm_call_evaluator, build_context, make_plan, determine_input_type, \
+    answer_question, push_to_git
 
 
 def exploration():
@@ -103,6 +104,8 @@ def explore_plan_action():
     graph.add_node("llm_call_evaluator", llm_call_evaluator)
     graph.add_node("build_context", build_context)
     graph.add_node("make_plan", make_plan)
+    graph.add_node("push_to_git", push_to_git)
+
 
     # Start with file exploration
     graph.add_edge(START, "llm_file_explore")
@@ -133,11 +136,13 @@ def explore_plan_action():
         {
             "Action": "environment",
             "next_step": "next_step",
-            END: END,
+            "push_to_git": "push_to_git",
         },
     )
     graph.add_edge("environment", "llm_call")
     graph.add_edge("next_step", "llm_call")
+    graph.add_edge("push_to_git", END)
+
 
     return graph
 
