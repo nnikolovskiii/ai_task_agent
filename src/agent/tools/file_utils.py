@@ -416,7 +416,7 @@ def remove_comments_from_python_code(code: str) -> str:
 
     return ''.join(result)
 
-def concat_agent_metadata(folder_path: str, ignore_patterns=None) -> str:
+def concat_agent_metadata(folder_path: str) -> str:
     """
     Finds all 'agent_metadata.md' files within a folder and its subfolders,
     concatenates their contents into a single string, each prefixed by its path.
@@ -431,7 +431,6 @@ def concat_agent_metadata(folder_path: str, ignore_patterns=None) -> str:
              each preceded by its file path, or an empty string if none are found
              or errors occur.
     """
-    final_ignore_patterns = DEFAULT_IGNORE_PATTERNS if ignore_patterns is None else ignore_patterns
 
     # Validate folder path
     if not os.path.exists(folder_path):
@@ -448,10 +447,10 @@ def concat_agent_metadata(folder_path: str, ignore_patterns=None) -> str:
         # Walk the directory tree
         for current_root, dir_names, file_names in os.walk(folder_path, topdown=True):
             # Modify dir_names in-place to skip ignored directories
-            dir_names[:] = [d for d in dir_names if d not in final_ignore_patterns]
+            dir_names[:] = [d for d in dir_names]
 
             # Check if the target file exists in the current directory
-            if target_filename in file_names and target_filename not in final_ignore_patterns:
+            if target_filename in file_names and target_filename:
                 file_path = os.path.join(current_root, target_filename)
                 full_file_path = Path(file_path)
 
@@ -459,11 +458,8 @@ def concat_agent_metadata(folder_path: str, ignore_patterns=None) -> str:
                 try:
                     with open(full_file_path, 'r', encoding='utf-8') as f:
                         content = f.read()
-                    # Append the path and content to the result
-                    result_lines.append(f"{file_path}: ")
-                    result_lines.append(content)
-                    # Add a newline at the end for separation if needed
-                    # result_lines.append("") # Optional: extra blank line between files
+                    # Combine path prefix and content in a single string
+                    result_lines.append(f"{file_path}: {content}")
                 except Exception as e:
                     print(f"Warning: Could not read file '{file_path}': {e}")
 

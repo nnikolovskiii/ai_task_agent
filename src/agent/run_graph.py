@@ -3,14 +3,10 @@ from langchain_core.runnables import RunnableConfig
 
 from agent.core.configs import graph
 
-project_path = "/home/nnikolovskii/notes"
+project_path = "/home/nnikolovskii/dev/personal-app/frontend"
 
 
-user_task = """Do not write code. For AI tasks project tasks: 
-
-- the voice thing isnt integrated with the app. it say completed but it is not.
-- i need a way to track how much it costs to run every task and logs on how long the tasks is and so on so on.
-"""
+user_task = """Wherever there is api call make i want it to be from .env."""
 
 
 config = RunnableConfig(recursion_limit=250)

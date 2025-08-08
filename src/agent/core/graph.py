@@ -6,7 +6,7 @@ from dotenv import load_dotenv
 from langchain_core.messages import HumanMessage
 from pydantic import BaseModel, Field
 
-from .ai_models import kimi_llm, gemini_flash_lite
+from .ai_models import kimi_llm, gemini_flash_lite, open_router_model
 from .state import State
 from ..prompts.prompts import final_context_instruction, make_plan_instruction, input_type_determination_prompt, \
     answer_question_prompt, commit_message_instruction

@@ -34,3 +34,31 @@ gemini_flash_lite = ChatGoogleGenerativeAI(
     model="gemini-2.5-flash-lite-preview-06-17",
     api_key=api_key,
 )
+
+from langchain_openai import ChatOpenAI
+from langchain_core.prompts import PromptTemplate
+from langchain.chains import LLMChain
+from os import getenv
+from dotenv import load_dotenv
+
+load_dotenv()
+
+template = """Question: {question}
+Answer: Let's think step by step."""
+
+prompt = PromptTemplate(template=template, input_variables=["question"])
+
+model1 = "qwen/qwen3-coder:free"
+model2 = "qwen/qwen3-235b-a22b-thinking-2507"
+model3= "openai/gpt-oss-120b"
+open_router_model = ChatOpenAI(
+  api_key=getenv("OPENROUTER_API_KEY"),
+  base_url="https://openrouter.ai/api/v1",
+  model=model3,
+  # default_headers={
+  #   "HTTP-Referer": getenv("YOUR_SITE_URL"),
+  #   "X-Title": getenv("YOUR_SITE_NAME"),
+  # }
+)
+
+
