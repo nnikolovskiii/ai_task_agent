@@ -51,14 +51,18 @@ prompt = PromptTemplate(template=template, input_variables=["question"])
 model1 = "qwen/qwen3-coder:free"
 model2 = "qwen/qwen3-235b-a22b-thinking-2507"
 model3= "openai/gpt-oss-120b"
+model4= "openai/gpt-5"
 open_router_model = ChatOpenAI(
   api_key=getenv("OPENROUTER_API_KEY"),
   base_url="https://openrouter.ai/api/v1",
-  model=model3,
+  model=model4,
   # default_headers={
   #   "HTTP-Referer": getenv("YOUR_SITE_URL"),
   #   "X-Title": getenv("YOUR_SITE_NAME"),
   # }
 )
 
-
+gpt5 = ChatOpenAI(
+    model="gpt-4.1-2025-04-14",
+    api_key=getenv("OPENAI_API_KEY"),
+)

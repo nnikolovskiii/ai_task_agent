@@ -5,7 +5,7 @@ import os
 import subprocess
 from typing import Callable
 
-from agent.core.ai_models import kimi_llm
+from agent.core.ai_models import kimi_llm, gpt5
 from bash_client.client import bash_executor
 
 load_dotenv()
@@ -123,4 +123,4 @@ def view_file(file_path: str) -> str:
 
 tools = [str_replace, run_bash_command, create_file, view_file]
 tools_by_name = {tool.name: tool for tool in tools}
-llm_with_tools = kimi_llm.bind_tools(tools)
+llm_with_tools = gpt5.bind_tools(tools)

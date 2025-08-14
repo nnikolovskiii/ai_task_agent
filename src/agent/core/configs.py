@@ -147,5 +147,5 @@ def explore_plan_action():
     return graph
 
 
-optimizer_builder = exploration_and_plan()
+optimizer_builder = exploration()
 graph = optimizer_builder.compile()

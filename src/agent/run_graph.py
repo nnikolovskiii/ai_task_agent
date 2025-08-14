@@ -3,10 +3,11 @@ from langchain_core.runnables import RunnableConfig
 
 from agent.core.configs import graph
 
-project_path = "/home/nnikolovskii/dev/personal-app/frontend"
+project_path = ""
 
 
-user_task = """Wherever there is api call make i want it to be from .env."""
+user_task = """Get all the chat components implementation, with the hooks and types. Get all the ui compontents as well."""
+
 
 
 config = RunnableConfig(recursion_limit=250)

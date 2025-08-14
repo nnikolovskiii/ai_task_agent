@@ -9,7 +9,7 @@ from langgraph.constants import END
 from .state import State
 from ..tools.llm_tools import llm_with_tools, tools_by_name
 from ..prompts.prompts import agent_instruction
-from .ai_models import kimi_llm
+from .ai_models import kimi_llm, gpt5
 from ..models.step_models import Step, StepList
 
 
@@ -18,7 +18,7 @@ def segment_into_steps(state: State):
     Segment the plan into steps.
     """
     plan = state["plan"]
-    agent_metadata = state["agent_metadata"]
+    agent_metadata = state.get("agent_metadata", "")
 
     from ..prompts.prompts import segment_plan_into_steps
     formatted_prompt = segment_plan_into_steps.format(
@@ -26,7 +26,7 @@ def segment_into_steps(state: State):
         agent_metadata=agent_metadata,
     )
 
-    structured_llm = kimi_llm.with_structured_output(StepList)
+    structured_llm = gpt5.with_structured_output(StepList)
 
     print("Invoking LLM to segment plan into steps...")
     result = structured_llm.invoke(formatted_prompt)
